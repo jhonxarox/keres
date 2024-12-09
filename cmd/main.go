@@ -4,6 +4,7 @@ import (
 	"keres/config"
 	"keres/internal/customer"
 	"keres/internal/database"
+	"keres/internal/limit"
 	"keres/internal/transaction"
 	"log"
 	"net/http"
@@ -48,6 +49,9 @@ func main() {
 	transactionRepo := transaction.NewRepository(db)
 	transactionHandler := transaction.NewHandler(transactionRepo)
 
+	limitRepo := limit.NewRepository(db)
+	limitHandler := limit.NewHandler(limitRepo)
+
 	// Set up Gin router
 	r := gin.Default()
 
@@ -64,6 +68,10 @@ func main() {
 
 	// Transaction routes
 	r.POST("/transactions", transactionHandler.CreateTransaction)
+
+	// Limit routes
+	r.GET("/limits/:customer_id", limitHandler.GetLimits)
+	r.POST("/limits", limitHandler.CreateLimit)
 
 	// Start the server
 	log.Println("Starting server on :8080...")
