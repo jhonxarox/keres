@@ -17,10 +17,10 @@ type Config struct {
 }
 
 func LoadConfig() *Config {
-	// Load environment variables from .env
+	// Load .env file
 	err := godotenv.Load()
 	if err != nil {
-		log.Println("Warning: Could not load .env file. Falling back to system environment variables.")
+		log.Println("Warning: Could not load .env file. Falling back to environment variables.")
 	}
 
 	return &Config{
@@ -33,7 +33,12 @@ func LoadConfig() *Config {
 }
 
 func (c *Config) DSN() string {
-	// PostgreSQL connection string
-	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		c.DBHost, c.DBPort, c.DBUsername, c.DBPassword, c.DBName)
+	// PostgreSQL DSN format for golang-migrate
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		c.DBUsername,
+		c.DBPassword,
+		c.DBHost,
+		c.DBPort,
+		c.DBName,
+	)
 }
