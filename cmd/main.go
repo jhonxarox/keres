@@ -1,25 +1,63 @@
 package main
 
 import (
+	"keres/config"
+	"keres/internal/customer"
+	"keres/internal/database"
+	"keres/internal/limit"
+	"keres/internal/transaction"
+	"keres/pkg/middleware"
 	"log"
 	"net/http"
 
-	"keres/config"
-	"keres/internal/database"
-
 	"github.com/gin-gonic/gin"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
+
+func runMigrations(dsn string) {
+	m, err := migrate.New(
+		"file://migrations", // Path to the migrations folder
+		dsn,
+	)
+	if err != nil {
+		log.Fatalf("Migration initialization failed: %v", err)
+	}
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatalf("Migration failed: %v", err)
+	}
+
+	log.Println("Migrations applied successfully!")
+}
 
 func main() {
 	// Load configuration
 	cfg := config.LoadConfig()
 
+	// Run database migrations
+	runMigrations(cfg.DSN())
+
 	// Initialize database
 	db := database.InitDB(cfg)
 	defer db.Close()
 
+	// Initialize repositories and handlers
+	customerRepo := customer.NewRepository(db)
+	customerHandler := customer.NewHandler(customerRepo)
+
+	transactionRepo := transaction.NewRepository(db)
+	transactionHandler := transaction.NewHandler(transactionRepo)
+
+	limitRepo := limit.NewRepository(db)
+	limitHandler := limit.NewHandler(limitRepo)
+
 	// Set up Gin router
 	r := gin.Default()
+
+	// Use Logger Middleware
+	r.Use(middleware.Logger())
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
@@ -27,6 +65,17 @@ func main() {
 			"message": "Application is running!",
 		})
 	})
+
+	// Customer routes
+	r.GET("/customers", customerHandler.GetAllCustomers)
+	r.POST("/customers", customerHandler.CreateCustomer)
+
+	// Transaction routes
+	r.POST("/transactions", transactionHandler.CreateTransaction)
+
+	// Limit routes
+	r.GET("/limits/:customer_id", limitHandler.GetLimits)
+	r.POST("/limits", limitHandler.CreateLimit)
 
 	// Start the server
 	log.Println("Starting server on :8080...")
