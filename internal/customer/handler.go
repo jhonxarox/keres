@@ -2,6 +2,7 @@ package customer
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,12 +16,23 @@ func NewHandler(repo *Repository) *Handler {
 }
 
 func (h *Handler) GetAllCustomers(c *gin.Context) {
-	customers, err := h.Repo.GetAllCustomers()
+	// Get pagination parameters
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	offset := (page - 1) * limit
+
+	// Fetch paginated customers
+	customers, err := h.Repo.GetPaginatedCustomers(limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, customers)
+
+	c.JSON(http.StatusOK, gin.H{
+		"page":    page,
+		"limit":   limit,
+		"results": customers,
+	})
 }
 
 func (h *Handler) CreateCustomer(c *gin.Context) {

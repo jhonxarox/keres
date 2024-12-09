@@ -36,3 +36,22 @@ func (r *Repository) CreateTransaction(t *Transaction) error {
 	}
 	return nil
 }
+
+func (r *Repository) GetPaginatedTransactions(limit, offset int) ([]Transaction, error) {
+	query := "SELECT transaction_id, customer_id, contract_number, otr, admin_fee, installment_amount, interest_amount, asset_name, created_at FROM transactions LIMIT $1 OFFSET $2"
+	rows, err := r.DB.Query(query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query paginated transactions: %w", err)
+	}
+	defer rows.Close()
+
+	var transactions []Transaction
+	for rows.Next() {
+		var t Transaction
+		if err := rows.Scan(&t.TransactionID, &t.CustomerID, &t.ContractNumber, &t.OTR, &t.AdminFee, &t.Installment, &t.InterestAmount, &t.AssetName, &t.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan transaction: %w", err)
+		}
+		transactions = append(transactions, t)
+	}
+	return transactions, nil
+}
