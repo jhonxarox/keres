@@ -6,6 +6,7 @@ import (
 	"keres/internal/database"
 	"keres/internal/limit"
 	"keres/internal/transaction"
+	"keres/pkg/middleware"
 	"log"
 	"net/http"
 
@@ -54,6 +55,9 @@ func main() {
 
 	// Set up Gin router
 	r := gin.Default()
+
+	// Use Logger Middleware
+	r.Use(middleware.Logger())
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
